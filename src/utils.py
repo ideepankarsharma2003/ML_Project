@@ -7,15 +7,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor,AdaBoostRegressor
-from sklearn.svm import SVR
-from sklearn.linear_model import LinearRegression, Ridge,Lasso
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
-from sklearn.model_selection import RandomizedSearchCV
-from catboost import CatBoostRegressor
-from xgboost import XGBRegressor
+from sklearn.model_selection import GridSearchCV
 
 from src.exception import CustomException
 
@@ -31,13 +23,20 @@ def save_object(file_path, obj):
         raise CustomException(e, sys)
     
 
-def evaluate_model(X_train, y_train, X_test, y_test, models):
+def evaluate_model(X_train, y_train, X_test, y_test, models, params):
     try:
         report= {}
 
         for i in range(len(list(models))):
             model= list(models.values())[i]
-            model.fit(X_train, y_train) # Train Model
+            para=params[list(models.keys())[i]]
+
+            gs = GridSearchCV(model,para,cv=3)
+            gs.fit(X_train,y_train)
+
+            # model.fit(X_train, y_train) # Train Model
+            model.set_params(**gs.best_params_)
+            model.fit(X_train,y_train)
 
             y_train_pred= model.predict(X_train)
             y_test_pred= model.predict(X_test)
@@ -50,5 +49,14 @@ def evaluate_model(X_train, y_train, X_test, y_test, models):
 
         return report
     
+    except Exception as e:
+        raise CustomException(e, sys)
+    
+
+
+def load_object(file_path):
+    try:
+        with open(file_path, 'rb') as file_obj:
+            return dill.load(file_obj)
     except Exception as e:
         raise CustomException(e, sys)
